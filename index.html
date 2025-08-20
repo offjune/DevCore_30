@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevCore - 30 Days Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfaf6;
+            color: #3f3c3a;
+        }
+        .active-week {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .card-completed {
+            background-color: #e0f2fe;
+            border-color: #3b82f6;
+        }
+        .modal-backdrop {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Cronograma de 30 Dias para a Maestria em Programação</h1>
+            <p class="mt-2 text-lg text-gray-600">Seu guia interativo para construir uma base sólida em lógica e resolução de problemas.</p>
+        </header>
+
+        <main>
+            <div id="summary-section" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-2">Progresso Total</h2>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div id="progress-bar" class="bg-blue-500 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-text" class="text-center mt-2 font-medium text-gray-600">0 de 30 dias completos</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 md:col-span-2">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-2">Foco da Semana</h2>
+                    <p id="week-objective" class="text-gray-600 text-lg">Selecione uma semana para ver os detalhes.</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-8">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div id="week-filters" class="flex flex-wrap justify-center gap-2 mb-4 md:mb-0">
+                        <button data-week="all" class="week-filter px-4 py-2 rounded-lg font-medium transition-colors duration-200 active-week">Todos</button>
+                        <button data-week="1" class="week-filter px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-100">Semana 1</button>
+                        <button data-week="2" class="week-filter px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-100">Semana 2</button>
+                        <button data-week="3" class="week-filter px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-100">Semana 3</button>
+                        <button data-week="4" class="week-filter px-4 py-2 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-100">Semana 4</button>
+                    </div>
+                    <div class="w-full md:w-1/3 h-48 md:h-32">
+                        <canvas id="time-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="days-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            </div>
+        </main>
+    </div>
+
+    <div id="day-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden modal-backdrop" onclick="closeModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="p-6 sm:p-8">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 id="modal-day" class="text-sm font-bold uppercase text-blue-500"></h2>
+                        <h1 id="modal-title" class="text-2xl sm:text-3xl font-bold text-gray-800 mt-1"></h1>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600 transition-colors" onclick="closeModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-6 text-gray-700">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2 flex items-center">
+                            <span class="mr-2">📚</span> Teoria (<span id="modal-theory-time"></span> min)
+                        </h3>
+                        <p id="modal-theory-desc" class="text-base leading-relaxed"></p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2 flex items-center">
+                            <span class="mr-2">💻</span> Prática (<span id="modal-practice-time"></span> min)
+                        </h3>
+                        <p id="modal-practice-desc" class="text-base leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const studyPlan = [
+            { week: 1, day: 1, topic: "Pensamento Computacional", theoryTime: 20, practiceTime: 40, theory: "Estude os 4 pilares: Decomposição, Reconhecimento de Padrões, Abstração e Design de Algoritmos.", practice: "Pegue um problema do mundo real (ex: 'organizar uma festa de aniversário') e descreva-o usando os 4 pilares. Não use código." },
+            { week: 1, day: 2, topic: "Variáveis e Tipos de Dados", theoryTime: 15, practiceTime: 45, theory: "Como um computador armazena informação? Entenda a diferença entre inteiros, floats, strings, booleanos e o conceito de alocação de memória.", practice: "Em sua linguagem, declare variáveis de todos os tipos primitivos. Tente 'forçar' erros (ex: somar um número com uma string) para entender as restrições." },
+            { week: 1, day: 3, topic: "Fluxo de Controle: Condicionais", theoryTime: 15, practiceTime: 45, theory: "O poder da tomada de decisão. Lógica boleana (AND, OR, NOT) e como if/else direcionam o fluxo.", practice: "Crie um programa que determina se um número é par ou ímpar, positivo ou negativo, e se é divisível por 3." },
+            { week: 1, day: 4, topic: "Fluxo de Controle: Laços", theoryTime: 15, practiceTime: 45, theory: "O conceito de iteração. Quando usar for (iterações definidas) vs. while (iterações baseadas em uma condição).", practice: "Crie um programa que imprima os números de 1 a 100. Depois, modifique-o para imprimir apenas os múltiplos de 5." },
+            { week: 1, day: 5, topic: "Funções e Abstração", theoryTime: 20, practiceTime: 40, theory: "O princípio DRY (Don't Repeat Yourself). Como encapsular lógica em blocos reutilizáveis. Parâmetros e retornos.", practice: "Transforme os programas dos dias 3 e 4 em funções que recebem parâmetros e retornam resultados." },
+            { week: 1, day: 6, topic: "Pseudocódigo e Fluxogramas", theoryTime: 15, practiceTime: 45, theory: "A importância de planejar antes de codificar. Aprenda a escrever a lógica de um algoritmo em pseudocódigo e a desenhar seu fluxo.", practice: "Resolva um problema simples (ex: 'calcular a média de notas') primeiro desenhando o fluxograma e escrevendo o pseudocódigo." },
+            { week: 1, day: 7, topic: "Revisão da Semana 1", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Resolva um problema que combine tudo: crie uma função que recebe N e calcula a soma de todos os números pares entre 1 e N." },
+            { week: 2, day: 8, topic: "Arrays (Listas)", theoryTime: 15, practiceTime: 45, theory: "A estrutura de dados mais fundamental. Acesso por índice, inserção, remoção, tamanho.", practice: "Crie uma lista de tarefas. Implemente funções para adicionar, remover e listar todas as tarefas." },
+            { week: 2, day: 9, topic: "Dicionários (Hash Maps)", theoryTime: 15, practiceTime: 45, theory: "O poder do par chave-valor. Acesso, inserção e remoção em tempo (quase) constante.", practice: "Crie um dicionário para armazenar informações de um usuário (nome, idade, cidade) e imprima de forma formatada." },
+            { week: 2, day: 10, topic: "Strings", theoryTime: 15, practiceTime: 45, theory: "Strings como arrays de caracteres, mas com métodos especiais. Concatenação, substring, busca, substituição.", practice: "Crie uma função que recebe uma frase e retorna o número de vogais nela." },
+            { week: 2, day: 11, topic: "Pilhas (Stacks - LIFO)", theoryTime: 20, practiceTime: 40, theory: "Last-In, First-Out. O conceito de push (empurrar) e pop (retirar). Pense em uma pilha de pratos.", practice: "Implemente uma pilha usando uma lista. Crie uma função que usa a pilha para inverter uma string." },
+            { week: 2, day: 12, topic: "Filas (Queues - FIFO)", theoryTime: 20, practiceTime: 40, theory: "First-In, First-Out. O conceito de enqueue (enfileirar) e dequeue (desenfileirar). Pense em uma fila de banco.", practice: "Implemente uma fila usando uma lista. Simule um pequeno sistema de atendimento." },
+            { week: 2, day: 13, topic: "Listas Ligadas (Conceitual)", theoryTime: 30, practiceTime: 30, theory: "O conceito de 'nó' que contém um valor e um 'ponteiro' para o próximo nó. Vantagens e desvantagens.", practice: "Desenhe no papel uma lista ligada. Escreva uma classe Node simples na sua linguagem." },
+            { week: 2, day: 14, topic: "Revisão da Semana 2", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Resolva um problema que te force a escolher a estrutura de dados correta: 'Dado um texto, conte a frequência de cada palavra'." },
+            { week: 3, day: 15, topic: "Busca Linear vs. Binária", theoryTime: 20, practiceTime: 40, theory: "Como encontrar um item em uma lista? A abordagem força-bruta (Linear) vs. a abordagem 'dividir para conquistar' (Binária, que exige lista ordenada).", practice: "Implemente ambas as funções de busca." },
+            { week: 3, day: 16, topic: "Análise de Complexidade (Big O)", theoryTime: 30, practiceTime: 30, theory: "O conceito mais importante para código escalável. Entenda O(1), O(n), O(log n) e O(n²).", practice: "Analise os algoritmos de busca do dia anterior e determine a complexidade Big O de cada um." },
+            { week: 3, day: 17, topic: "Ordenação Simples (Bubble Sort)", theoryTime: 20, practiceTime: 40, theory: "Como ordenar uma lista? Entenda a lógica do Bubble Sort, que compara pares adjacentes. É intuitivo, mas ineficiente (O(n²)).", practice: "Implemente o Bubble Sort." },
+            { week: 3, day: 18, topic: "Ordenação Eficiente (Merge Sort)", theoryTime: 30, practiceTime: 30, theory: "Entenda a estratégia 'dividir para conquistar' do Merge Sort. É muito eficiente (O(n log n)).", practice: "Desenhe o processo do Merge Sort para uma lista de 8 números." },
+            { week: 3, day: 19, topic: "Recursão", theoryTime: 20, practiceTime: 40, theory: "Uma função que chama a si mesma. Entenda o 'caso base' (condição de parada) e o 'passo recursivo'.", practice: "Resolva o problema do cálculo de fatorial usando recursão." },
+            { week: 3, day: 20, topic: "Padrões em Hash Maps", theoryTime: 15, practiceTime: 45, theory: "Como usar a busca O(1) dos dicionários para resolver problemas de forma extremamente rápida.", practice: "Resolva o problema clássico 'Two Sum': dada uma lista de números e um alvo, encontre dois números que somam o alvo." },
+            { week: 3, day: 21, topic: "Revisão da Semana 3", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Pegue todos os algoritmos que você implementou e anote a complexidade de tempo (Big O) de cada um." },
+            { week: 4, day: 22, topic: "Paradigmas de Programação", theoryTime: 60, practiceTime: 0, theory: "Estude a diferença entre programação Imperativa (como fazer) e Declarativa (o que fazer), incluindo Procedural, POO e Funcional.", practice: "N/A" },
+            { week: 4, day: 23, topic: "Introdução à POO", theoryTime: 20, practiceTime: 40, theory: "O que são Classes (moldes) e Objetos (instâncias)? Atributos (dados) e Métodos (comportamentos).", practice: "Crie uma classe Carro com atributos marca, modelo, ligado e métodos ligar(), desligar()." },
+            { week: 4, day: 24, topic: "Pilares da POO", theoryTime: 30, practiceTime: 30, theory: "Herança (uma classe herda de outra) e Polimorfismo (objetos respondem à mesma mensagem).", practice: "Crie uma classe Veiculo e faça Carro e Moto herdarem dela." },
+            { week: 4, day: 25, topic: "Conceitos de Prog. Funcional", theoryTime: 30, practiceTime: 30, theory: "O que são Funções Puras (sem efeitos colaterais) e Imutabilidade (dados que não mudam).", practice: "Refatore uma função que você já fez para que ela se torne pura (recebe uma lista e retorna uma nova lista modificada)." },
+            { week: 4, day: 26, topic: "Modularidade e APIs", theoryTime: 60, practiceTime: 0, theory: "Como quebrar um programa grande em módulos? O que é uma API e por que ela é a base da comunicação entre sistemas?", practice: "N/A" },
+            { week: 4, day: 27, topic: "Tratamento de Erros", theoryTime: 20, practiceTime: 40, theory: "Código robusto não quebra. O que são try, except e finally. Como capturar e tratar erros de forma elegante.", practice: "Pegue um programa que lê um arquivo e adicione tratamento de exceção para o caso de o arquivo não existir." },
+            { week: 4, day: 28, topic: "Revisão da Semana 4", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Pense no seu projeto VertoArc. Identifique onde você usou conceitos de POO, modularidade e tratamento de erros e como poderia melhorá-lo." },
+            { week: 4, day: 29, topic: "Projeto Final: Planejamento", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Não codifique. Planeje um sistema de gerenciamento de biblioteca: decomponha o problema, escolha as estruturas de dados, desenhe a abstração e escreva o pseudocódigo." },
+            { week: 4, day: 30, topic: "Projeto Final: Implementação", theoryTime: 0, practiceTime: 60, theory: "N/A", practice: "Pegue seu plano do dia 29 e implemente-o na sua linguagem de escolha. Foque em criar um código limpo e lógico." }
+        ];
+
+        const weekObjectives = {
+            1: "Desconstruir problemas e entender como o computador executa instruções.",
+            2: "Aprender as diferentes formas de organizar e armazenar dados eficientemente.",
+            3: "Aprender a manipular dados de forma eficiente e a medir essa eficiência.",
+            4: "Elevar o nível do seu design de código e entender diferentes formas de programar."
+        };
+
+        let completionStatus = JSON.parse(localStorage.getItem('studyCompletion')) || {};
+        let currentFilter = 'all';
+        let timeChart;
+
+        const daysGrid = document.getElementById('days-grid');
+        const modal = document.getElementById('day-modal');
+        const weekFiltersContainer = document.getElementById('week-filters');
+
+        const renderDays = () => {
+            daysGrid.innerHTML = '';
+            const filteredDays = currentFilter === 'all' 
+                ? studyPlan 
+                : studyPlan.filter(day => day.week == currentFilter);
+
+            filteredDays.forEach(day => {
+                const isCompleted = completionStatus[day.day];
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1 ${isCompleted ? 'card-completed' : 'bg-white'}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold uppercase text-blue-500">Dia ${day.day}</span>
+                        <input type="checkbox" class="day-checkbox h-5 w-5 rounded text-blue-500 focus:ring-blue-400 border-gray-300" data-day="${day.day}" ${isCompleted ? 'checked' : ''}>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">${day.topic}</h3>
+                `;
+                card.querySelector('.day-checkbox').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleCompletion(day.day);
+                });
+                card.addEventListener('click', () => openModal(day));
+                daysGrid.appendChild(card);
+            });
+        };
+        
+        const openModal = (day) => {
+            document.getElementById('modal-day').textContent = `Dia ${day.day} - Semana ${day.week}`;
+            document.getElementById('modal-title').textContent = day.topic;
+            document.getElementById('modal-theory-time').textContent = day.theoryTime;
+            document.getElementById('modal-theory-desc').textContent = day.theory;
+            document.getElementById('modal-practice-time').textContent = day.practiceTime;
+            document.getElementById('modal-practice-desc').textContent = day.practice;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        };
+
+        const toggleCompletion = (day) => {
+            completionStatus[day] = !completionStatus[day];
+            localStorage.setItem('studyCompletion', JSON.stringify(completionStatus));
+            renderDays();
+            updateProgress();
+        };
+
+        const updateProgress = () => {
+            const completedDays = Object.values(completionStatus).filter(Boolean).length;
+            const progress = (completedDays / studyPlan.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${completedDays} de ${studyPlan.length} dias completos`;
+        };
+        
+        const updateChart = () => {
+            const dataToShow = currentFilter === 'all' 
+                ? studyPlan 
+                : studyPlan.filter(day => day.week == currentFilter);
+            
+            const totalTheory = dataToShow.reduce((sum, day) => sum + day.theoryTime, 0);
+            const totalPractice = dataToShow.reduce((sum, day) => sum + day.practiceTime, 0);
+
+            if (timeChart) {
+                timeChart.data.datasets[0].data = [totalTheory, totalPractice];
+                timeChart.update();
+            } else {
+                const ctx = document.getElementById('time-chart').getContext('2d');
+                timeChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Teoria (min)', 'Prática (min)'],
+                        datasets: [{
+                            data: [totalTheory, totalPractice],
+                            backgroundColor: ['#60a5fa', '#3b82f6'],
+                            borderColor: '#fdfaf6',
+                            borderWidth: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + ' min';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        weekFiltersContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('week-filter')) {
+                currentFilter = e.target.dataset.week;
+                document.querySelectorAll('.week-filter').forEach(btn => btn.classList.remove('active-week'));
+                e.target.classList.add('active-week');
+                
+                const objectiveEl = document.getElementById('week-objective');
+                if(currentFilter === 'all') {
+                    objectiveEl.textContent = "Visão geral de todo o plano de 30 dias.";
+                } else {
+                    objectiveEl.textContent = weekObjectives[currentFilter];
+                }
+
+                renderDays();
+                updateChart();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
+        // Initial render
+        document.getElementById('week-objective').textContent = "Visão geral de todo o plano de 30 dias.";
+        renderDays();
+        updateProgress();
+        updateChart();
+    </script>
+</body>
+</html>
